@@ -366,7 +366,7 @@ class S3ResourceUploader(BaseS3Uploader):
         if filename is not None:
             filepath = os.path.join(directory, filename)
         else:
-            filepath = os.path.join(directory, self.filename)
+            filepath = directory
 
         return filepath
 
