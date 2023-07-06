@@ -1,0 +1,73 @@
+---
+version: "3.7"
+services:
+  app:
+    image: openknowledge/ckan-dev:${CKAN_VERSION}
+    build:
+      context: .
+      args:
+        CKAN_VERSION: ${CKAN_VERSION}
+    env_file:
+      - .env
+    environment:
+      CKAN_SOLR_URL: http://solr:8983/solr/ckan
+      CKAN_REDIS_URL: redis://redis:6379/1
+      CKAN_DATAPUSHER_URL: http://localhost:8080/  # datapusher is not really enabled
+      CKAN__PLUGINS: s3filestore
+      PYTHONDONTWRITEBYTECODE: 1
+    working_dir: /app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+      - redis
+      - solr
+    volumes:
+      - ckan_storage:/var/lib/ckan
+      - ./config:/etc/ckan
+      - .:/srv/app/src_extensions/s3filestore
+      #- ./test.ini:/srv/app/production.ini
+      #- ./test.ini:/srv/app/ckan2.ini
+      #- ./test.ini:/srv/app/test-core.ini
+  db:
+    image: ckan/ckan-postgres-dev:${CKAN_VERSION}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "pg_isready -u postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+  redis:
+    image: redis:alpine
+  solr:
+    image: ckan/ckan-solr-dev:${CKAN_VERSION}
+    ports:
+      - "8983:8983"
+  localstack-container:
+    container_name: "localstack-container"
+    privileged: true
+    image: localstack/localstack:0.11.0
+    ports:
+      - "4572:4572"
+      - "8081:8081"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - HOSTNAME=
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DEFAULT_REGION=us-east-1
+      - START_WEB=1
+    volumes:
+      - "./tmp/localstack:/tmp/localstack"
+      - "./tmp/localstack/run/docker.sock:/var/run/docker.sock"
+
+volumes:
+  ckan_storage:
+  pg_data:
+  solr_data:
